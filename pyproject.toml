@@ -1,0 +1,82 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "langchain-ejentum"
+version = "0.1.0"
+description = "LangChain integration for the Ejentum Reasoning Harness. Four BaseTool subclasses (reasoning, code, anti-deception, memory) an agent calls before generating. Each call returns a task-matched cognitive operation engineered in two layers: a natural-language procedure plus an executable reasoning topology (graph DAG with gates, parallel branches, and meta-cognitive exits)."
+readme = "README.md"
+requires-python = ">=3.10,<3.14"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Ejentum", email = "info@ejentum.com" },
+]
+keywords = [
+    "langchain",
+    "langchain-tools",
+    "ejentum",
+    "reasoning-harness",
+    "agentic-ai",
+    "llm",
+    "anti-deception",
+    "cognitive-scaffold",
+    "ai",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "langchain-core>=0.3.0,<1.0",
+    "requests>=2.31.0",
+    "pydantic>=2.0.0",
+]
+
+[project.urls]
+Homepage = "https://ejentum.com"
+Documentation = "https://ejentum.com/docs/api_reference"
+Repository = "https://github.com/ejentum/langchain-ejentum"
+Issues = "https://github.com/ejentum/langchain-ejentum/issues"
+Changelog = "https://github.com/ejentum/langchain-ejentum/blob/main/CHANGELOG.md"
+Pricing = "https://ejentum.com/pricing"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=5.0.0",
+    "build>=1.2.0",
+    "ruff>=0.6.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/langchain_ejentum"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/langchain_ejentum",
+    "tests",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "pyproject.toml",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
