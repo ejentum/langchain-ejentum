@@ -219,7 +219,7 @@ class EjentumTools:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        api_url: str = "https://api.ejentum.com/harness",
+        api_url: str = "https://api.ejentum.com/harness/",
         timeout_seconds: float = 10.0,
     ) -> None:
         self._kwargs = dict(
