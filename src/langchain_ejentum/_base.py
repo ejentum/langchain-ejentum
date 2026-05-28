@@ -15,7 +15,7 @@ from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
 
-DEFAULT_API_URL = "https://ejentum-main-ab125c3.zuplo.app/logicv1/"
+DEFAULT_API_URL = "https://api.ejentum.com/harness"
 DEFAULT_TIMEOUT_SECONDS = 10.0
 
 
