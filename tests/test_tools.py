@@ -6,6 +6,10 @@ import pytest
 from langchain_core.tools import BaseTool
 
 from langchain_ejentum import (
+    EjentumAdaptiveAntiDeceptionTool,
+    EjentumAdaptiveCodeTool,
+    EjentumAdaptiveMemoryTool,
+    EjentumAdaptiveReasoningTool,
     EjentumAntiDeceptionTool,
     EjentumCodeTool,
     EjentumMemoryTool,
@@ -24,45 +28,48 @@ def _mock_response(
     return resp
 
 
+# Class -> on-wire mode string. LangChain accepts hyphenated tool names,
+# so the LLM-facing tool `name` attribute matches the on-wire mode.
+CLASS_TO_MODE = [
+    (EjentumReasoningTool, "reasoning"),
+    (EjentumCodeTool, "code"),
+    (EjentumAntiDeceptionTool, "anti-deception"),
+    (EjentumMemoryTool, "memory"),
+    (EjentumAdaptiveReasoningTool, "adaptive-reasoning"),
+    (EjentumAdaptiveCodeTool, "adaptive-code"),
+    (EjentumAdaptiveAntiDeceptionTool, "adaptive-anti-deception"),
+    (EjentumAdaptiveMemoryTool, "adaptive-memory"),
+]
+
+ALL_CLASSES = [cls for cls, _ in CLASS_TO_MODE]
+
+
+# ---------------------------------------------------------------------------
+# BaseTool subclassing + naming
+# ---------------------------------------------------------------------------
+
+
 def test_each_tool_is_basetool_subclass():
-    for cls in (
-        EjentumReasoningTool,
-        EjentumCodeTool,
-        EjentumAntiDeceptionTool,
-        EjentumMemoryTool,
-    ):
+    for cls in ALL_CLASSES:
         assert issubclass(cls, BaseTool), f"{cls.__name__} must subclass BaseTool"
 
 
 def test_each_tool_has_distinct_name_and_description():
-    instances = [
-        EjentumReasoningTool(),
-        EjentumCodeTool(),
-        EjentumAntiDeceptionTool(),
-        EjentumMemoryTool(),
-    ]
+    instances = [cls() for cls in ALL_CLASSES]
     names = {t.name for t in instances}
-    assert names == {
-        "ejentum_harness_reasoning",
-        "ejentum_harness_code",
-        "ejentum_harness_anti_deception",
-        "ejentum_harness_memory",
-    }
+    expected = {mode for _cls, mode in CLASS_TO_MODE}
+    assert names == expected, f"Tool names must match canonical modes; got {names}"
     for t in instances:
         assert len(t.description) > 50, f"{t.name} description too short"
 
 
-def test_ejentum_tools_factory_returns_four_tools():
+def test_ejentum_tools_factory_returns_eight_tools():
     factory = EjentumTools()
     tools = factory.get_tools()
-    assert len(tools) == 4
+    assert len(tools) == 8
     assert all(isinstance(t, BaseTool) for t in tools)
-    assert {t.name for t in tools} == {
-        "ejentum_harness_reasoning",
-        "ejentum_harness_code",
-        "ejentum_harness_anti_deception",
-        "ejentum_harness_memory",
-    }
+    expected = {mode for _cls, mode in CLASS_TO_MODE}
+    assert {t.name for t in tools} == expected
 
 
 def test_factory_propagates_shared_config():
@@ -106,32 +113,29 @@ def test_whitespace_only_query_returns_validation_error(monkeypatch):
     mock_post.assert_not_called()
 
 
-@pytest.mark.parametrize(
-    "cls,mode",
-    [
-        (EjentumReasoningTool, "reasoning"),
-        (EjentumCodeTool, "code"),
-        (EjentumAntiDeceptionTool, "anti-deception"),
-        (EjentumMemoryTool, "memory"),
-    ],
-)
+# ---------------------------------------------------------------------------
+# Per-tool mode dispatch (8 classes × 1 mode each)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("cls,mode", CLASS_TO_MODE)
 @patch("langchain_ejentum._base.requests.post")
 def test_each_tool_dispatches_correct_mode(mock_post, cls, mode, monkeypatch):
     monkeypatch.setenv("EJENTUM_API_KEY", "test-key")
     mock_post.return_value = _mock_response(
         status_code=200,
-        json_data=[{mode: f"[NEGATIVE GATE] sample {mode} scaffold"}],
+        json_data=[{mode: f"[PROCEDURE] sample {mode} injection"}],
     )
 
     tool = cls()
     query = (
         "I noticed drift. This might mean Y. Sharpen: Z."
-        if mode == "memory"
+        if "memory" in mode
         else "sample task"
     )
     result = tool.invoke({"query": query})
 
-    assert f"sample {mode} scaffold" in result
+    assert f"sample {mode} injection" in result
     mock_post.assert_called_once()
     _, kwargs = mock_post.call_args
     assert kwargs["headers"]["Authorization"] == "Bearer test-key"
@@ -139,12 +143,17 @@ def test_each_tool_dispatches_correct_mode(mock_post, cls, mode, monkeypatch):
     assert kwargs["json"]["query"] == query
 
 
+# ---------------------------------------------------------------------------
+# Failure surface
+# ---------------------------------------------------------------------------
+
+
 @patch("langchain_ejentum._base.requests.post")
 def test_explicit_api_key_arg_overrides_env(mock_post, monkeypatch):
     monkeypatch.setenv("EJENTUM_API_KEY", "env-key")
     mock_post.return_value = _mock_response(
         status_code=200,
-        json_data=[{"reasoning": "scaffold"}],
+        json_data=[{"reasoning": "injection"}],
     )
 
     tool = EjentumReasoningTool(api_key="explicit-key")
@@ -192,7 +201,7 @@ def test_unexpected_response_shape_is_handled(mock_post, monkeypatch):
 
 
 @patch("langchain_ejentum._base.requests.post")
-def test_non_string_scaffold_value_is_handled(mock_post, monkeypatch):
+def test_non_string_injection_value_is_handled(mock_post, monkeypatch):
     monkeypatch.setenv("EJENTUM_API_KEY", "test-key")
     mock_post.return_value = _mock_response(
         status_code=200,
